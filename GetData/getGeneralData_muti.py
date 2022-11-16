@@ -1,3 +1,4 @@
+# 目前整合了股票（未复权、前复权、后复权）、指数、数字货币、ETF基金、期货、期权的行情数据
 import tushare as ts
 import numpy as np
 import pandas as pd
@@ -6,9 +7,7 @@ import time
 import logging
 import argparse
 import threading
-import traceback
-
-
+import os
 
 def getLogging():
     # 创建logger对象
@@ -38,11 +37,11 @@ pro = get_pro_api()
 def get_general(ts_code,start_date=date.today().strftime("%Y%m%d"),end_date=date.today().strftime("%Y%m%d"),**kwargs):
     # 通用行情接口
     # 数据说明：交易日每天15点～16点之间入库
-    adj = kwargs.get('adj','qfq')
+    adj = kwargs.get('adj')
     freq = kwargs.get('freq','D')
     asset = kwargs.get('asset','E')
     factors = kwargs.get('factors',[])
-    adjfactor = kwargs.get('adjfactor',True)
+    adjfactor = kwargs.get('adjfactor',False)
     data = ts.pro_bar(ts_code=ts_code, adj=adj, freq=freq,start_date=start_date, end_date=end_date,ma=ma,asset=asset,factors=factors,adjfactor=adjfactor)
     return data
 
@@ -52,11 +51,15 @@ def updateData(ts_code,start_date=date.today().strftime("%Y%m%d"),end_date=date.
     try:
         if mode == 'f':a = int('a')
         # 增量
-        df_hist = pd.read_csv(data_path + ts_code + '.csv')
-        data = get_general(ts_code=ts_code, start_date=start_date, end_date=end_date,**kwargs)
-        data['trade_date'] = pd.to_numeric(data['trade_date'])
-        data = data.append(df_hist)
-        data = data.drop_duplicates(['trade_date'])
+        file_path = data_path + ts_code + '.csv'
+        if os.path.exists(file_path):
+            df_hist = pd.read_csv(file_path)
+            data = get_general(ts_code=ts_code, start_date=start_date, end_date=end_date,**kwargs)
+            data['trade_date'] = pd.to_numeric(data['trade_date'])
+            data = data.append(df_hist)
+            data = data.drop_duplicates(['trade_date'])
+        else:
+            data = get_general(ts_code=ts_code, start_date=start_date, end_date=end_date, **kwargs)
         data.set_index('trade_date', inplace=True)
         data.to_csv(data_path + ts_code+'.csv')
     except IOError as e:
@@ -88,13 +91,14 @@ def multi_thread(ts_codes,*args):
             status = updateData(ts_code=ts_code, start_date=start_date, end_date=end_date, data_path=data_path,
                                 mode=mode, adj=adj,
                                 freq=freq, ma=ma, asset='E', factors=['tor', 'vr'], adjfactor=True)
-        count += 1
+        if status == 0:
+            count += 1
         if count % 100 == 0:
             logger.info('数据更新进度{0}/{1}，耗时:{2:.2f}s'.format(count, n, time.time() - start_time))
             # if freq in ('D', 'W'):
             # time.sleep(60)
     end_time = time.time()
-    logger.info('更新{1}只股票数据,耗时:{2:.2f}s'.format(date.today().strftime("%Y%m%d"), count,
+    logger.info('{0},{1} {2} 成功更新{3}只股票数据,耗时:{4:.2f}s'.format(freq,adj,date.today().strftime("%Y%m%d"), count,
                                                                            end_time - start_time))
 
 
@@ -104,7 +108,7 @@ if __name__ == '__main__':
     parser.add_argument("--end-date",default=((date.today()).strftime("%Y%m%d")))
     parser.add_argument("--freq", default=('D'))
     parser.add_argument("--adj", default=('qfq'))
-    parser.add_argument("--ma", default=([3,5,10,20,30,60,120]))
+    parser.add_argument("--ma", default=([3,5,10,20,30,60,90,120]))
     parser.add_argument("--threads", default=(10))
     args = parser.parse_args()
 
@@ -141,8 +145,9 @@ if __name__ == '__main__':
 
     mode = 'f'
     if adj == 'wfq':
-        start_date = (date.today()-timedelta(1)).strftime("%Y%m%d")
-        mode = 's'
+        # start_date = (date.today()-timedelta(1)).strftime("%Y%m%d")
+        mode = 'f'
+        adj = None
     global count
     count = 0
     logger.info('开始更新 {0} : {1} 数据'.format(freq,adj))
