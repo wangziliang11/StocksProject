@@ -9,12 +9,12 @@ done
 
 python getDailyBasic.py
 
-#for str in 'wfq' 'qfq' 'hfq'
-#do
-#python getGeneralData_muti.py --freq='M' --adj=$str --threads=10
-#sleep 30
-#python getGeneralData_muti.py --freq='W' --adj=$str --threads=10
-#sleep 30
-#done
+for str in 'wfq' 'qfq' 'hfq'
+do
+python getGeneralData_muti.py --freq='M' --adj=$str --threads=10
+sleep 30
+python getGeneralData_muti.py --freq='W' --adj=$str --threads=10
+sleep 30
+done
 
 
