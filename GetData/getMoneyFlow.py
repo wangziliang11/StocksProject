@@ -1,4 +1,5 @@
-# 获取全部股票每日重要的基本面指标，可用于选股分析、报表展示等。
+# 获取沪深A股票资金流向数据，分析大单小单成交情况，用于判别资金动向
+# 小单：5万以下 中单：5万～20万 大单：20万～100万 特大单：成交额>=100万
 import tushare as ts
 import numpy as np
 import pandas as pd
@@ -9,14 +10,13 @@ import argparse
 import threading
 import os
 
-
 def getLogging():
     # 创建logger对象
-    logger = logging.getLogger('dailybasic_logger')
+    logger = logging.getLogger('general_logger')
     # 设置日志等级
     logger.setLevel(logging.DEBUG)
     # 追加写入文件a ，设置utf-8编码防止中文写入乱码
-    test_log = logging.FileHandler('../logs/get_dailybasic.log', 'a', encoding='utf-8')
+    test_log = logging.FileHandler('../logs/get_moneyflow.log', 'a', encoding='utf-8')
     # 向文件输出的日志级别
     test_log.setLevel(logging.DEBUG)
     # 向文件输出的日志信息格式
@@ -25,6 +25,7 @@ def getLogging():
     # 加载文件到logger对象中
     logger.addHandler(test_log)
     return logger
+
 logger = getLogging()
 
 def get_pro_api():
@@ -34,9 +35,8 @@ def get_pro_api():
     return pro
 pro = get_pro_api()
 
-def get_daily_basic(ts_code,trade_date,start_date,end_date):
-    fields = 'ts_code,trade_date,turnover_rate_f,pe,pe_ttm,pb,ps,ps_ttm,dv_ratio,dv_ttm,total_share,float_share,free_share,total_mv,circ_mv'
-    data = pro.daily_basic(ts_code=ts_code, trade_date=trade_date,start_date=start_date,end_date=end_date,fields=fields)
+def get_moneyflow(ts_code,trade_date,start_date,end_date):
+    data = pro.moneyflow(ts_code=ts_code, trade_date=trade_date,start_date=start_date,end_date=end_date)
     return data
 
 def updateData(ts_code,trade_date,start_date,end_date,data_path):
@@ -44,12 +44,12 @@ def updateData(ts_code,trade_date,start_date,end_date,data_path):
         file_path = data_path + ts_code + '.csv'
         if os.path.exists(file_path):
             data_hist = pd.read_csv(data_path + ts_code + '.csv')
-            data = get_daily_basic(ts_code=ts_code, trade_date=trade_date,start_date=start_date, end_date=end_date)
+            data = get_moneyflow(ts_code=ts_code, trade_date=trade_date,start_date=start_date, end_date=end_date)
             data['trade_date'] = pd.to_numeric(data['trade_date'])
             data = data.append(data_hist)
             data = data.drop_duplicates(['trade_date'])
         else:
-            data = get_daily_basic(ts_code=ts_code, trade_date=trade_date, start_date=start_date, end_date=end_date)
+            data = get_moneyflow(ts_code=ts_code, trade_date=trade_date, start_date=start_date, end_date=end_date)
         data.set_index('trade_date', inplace=True)
         data.to_csv(data_path + ts_code + '.csv')
     except IOError as e:
@@ -68,23 +68,27 @@ def multi_thread(ts_codes,*args):
     global count
     global n
     global start_time
-    trade_date,start_date, end_date, data_path = args
+    trade_date, start_date, end_date, data_path = args
     for ts_code in ts_codes[:]:
-        status = updateData(ts_code=ts_code, trade_date=trade_date,start_date=start_date, end_date=end_date, data_path=data_path)
+        status = updateData(ts_code=ts_code, trade_date=trade_date, start_date=start_date, end_date=end_date,
+                            data_path=data_path)
         while status == -1:
             time.sleep(10)
-            status = updateData(ts_code=ts_code, trade_date=trade_date,start_date=start_date, end_date=end_date, data_path=data_path)
+            status = updateData(ts_code=ts_code, trade_date=trade_date, start_date=start_date, end_date=end_date,
+                                data_path=data_path)
         if status == 0:
             count += 1
         if count % 100 == 0:
             logger.info('数据更新进度{0}/{1}，耗时:{2:.2f}s'.format(count, n, time.time() - start_time))
     end_time = time.time()
-    logger.info('{0} 成功更新{1}只股票数据,耗时:{2:.2f}s'.format(date.today().strftime("%Y%m%d"), count,end_time - start_time))
+    logger.info(
+        '{0} 成功更新{1}只股票数据,耗时:{2:.2f}s'.format(date.today().strftime("%Y%m%d"), count, end_time - start_time))
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--start-date",default=(date.today()-timedelta(365*30)).strftime("%Y%m%d"))
-    parser.add_argument("--end-date",default=date.today().strftime("%Y%m%d"))
+    parser.add_argument("--start-date", default=(date.today() - timedelta(365 * 30)).strftime("%Y%m%d"))
+    parser.add_argument("--end-date", default=date.today().strftime("%Y%m%d"))
     parser.add_argument("--trade-date", default=None)
     parser.add_argument("--threads", default=(20))
 
@@ -109,22 +113,20 @@ if __name__ == '__main__':
     logger.info('读取到 {} 只股票基本数据'.format(n))
 
     ##### 获取数据 #####
-    data_path = '../Data/Dynamic/daily_basic/'
+    data_path = '../Data/Dynamic/moneyflow/'
     mode = 'f'
     global count
     global start_time
     count = 0
     start_time = time.time()
-    logger.info('开始更新 {} daily_basic数据'.format(date.today().strftime("%Y%m%d")))
+    logger.info('开始更新 {} moneyflow数据'.format(date.today().strftime("%Y%m%d")))
     logger.info('数据存储路径 : {}'.format(data_path))
     thread_list = []
     for i in range(len(ts_codes_list)):
         name = 't' + str(i)
         thread_example = threading.Thread(name=name, target=multi_thread,
-                                          args=(ts_codes_list[i], trade_date,start_date, end_date, data_path))
+                                          args=(ts_codes_list[i], trade_date, start_date, end_date, data_path))
         thread_list.append(thread_example)
     start_time = time.time()
     for th in thread_list:
         th.start()
-
-

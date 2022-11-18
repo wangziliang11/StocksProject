@@ -1,4 +1,4 @@
-# 获取全部股票每日重要的基本面指标，可用于选股分析、报表展示等。
+# 获取上市公司财务利润表数据
 import tushare as ts
 import numpy as np
 import pandas as pd
@@ -9,14 +9,13 @@ import argparse
 import threading
 import os
 
-
 def getLogging():
     # 创建logger对象
-    logger = logging.getLogger('dailybasic_logger')
+    logger = logging.getLogger('general_logger')
     # 设置日志等级
     logger.setLevel(logging.DEBUG)
     # 追加写入文件a ，设置utf-8编码防止中文写入乱码
-    test_log = logging.FileHandler('../logs/get_dailybasic.log', 'a', encoding='utf-8')
+    test_log = logging.FileHandler('../logs/get_income.log', 'a', encoding='utf-8')
     # 向文件输出的日志级别
     test_log.setLevel(logging.DEBUG)
     # 向文件输出的日志信息格式
@@ -25,6 +24,7 @@ def getLogging():
     # 加载文件到logger对象中
     logger.addHandler(test_log)
     return logger
+
 logger = getLogging()
 
 def get_pro_api():
@@ -34,24 +34,16 @@ def get_pro_api():
     return pro
 pro = get_pro_api()
 
-def get_daily_basic(ts_code,trade_date,start_date,end_date):
-    fields = 'ts_code,trade_date,turnover_rate_f,pe,pe_ttm,pb,ps,ps_ttm,dv_ratio,dv_ttm,total_share,float_share,free_share,total_mv,circ_mv'
-    data = pro.daily_basic(ts_code=ts_code, trade_date=trade_date,start_date=start_date,end_date=end_date,fields=fields)
+def get_income(ts_code):
+    fields = 'ts_code,ann_date,f_ann_date,end_date,report_type,comp_type,basic_eps,diluted_eps'
+    data = pro.income(ts_code=ts_code)
     return data
 
-def updateData(ts_code,trade_date,start_date,end_date,data_path):
+def updateData(ts_code,data_path):
     try:
         file_path = data_path + ts_code + '.csv'
-        if os.path.exists(file_path):
-            data_hist = pd.read_csv(data_path + ts_code + '.csv')
-            data = get_daily_basic(ts_code=ts_code, trade_date=trade_date,start_date=start_date, end_date=end_date)
-            data['trade_date'] = pd.to_numeric(data['trade_date'])
-            data = data.append(data_hist)
-            data = data.drop_duplicates(['trade_date'])
-        else:
-            data = get_daily_basic(ts_code=ts_code, trade_date=trade_date, start_date=start_date, end_date=end_date)
-        data.set_index('trade_date', inplace=True)
-        data.to_csv(data_path + ts_code + '.csv')
+        data = get_income(ts_code=ts_code)
+        data.to_csv(file_path)
     except IOError as e:
         logger.info('IOError -1')
         return -1
@@ -68,30 +60,26 @@ def multi_thread(ts_codes,*args):
     global count
     global n
     global start_time
-    trade_date,start_date, end_date, data_path = args
+    data_path = args[0]
     for ts_code in ts_codes[:]:
-        status = updateData(ts_code=ts_code, trade_date=trade_date,start_date=start_date, end_date=end_date, data_path=data_path)
+        status = updateData(ts_code=ts_code,data_path=data_path)
         while status == -1:
             time.sleep(10)
-            status = updateData(ts_code=ts_code, trade_date=trade_date,start_date=start_date, end_date=end_date, data_path=data_path)
+            status = updateData(ts_code=ts_code,data_path=data_path)
         if status == 0:
             count += 1
         if count % 100 == 0:
             logger.info('数据更新进度{0}/{1}，耗时:{2:.2f}s'.format(count, n, time.time() - start_time))
     end_time = time.time()
-    logger.info('{0} 成功更新{1}只股票数据,耗时:{2:.2f}s'.format(date.today().strftime("%Y%m%d"), count,end_time - start_time))
+    logger.info(
+        '{0} 成功更新{1}只股票数据,耗时:{2:.2f}s'.format(date.today().strftime("%Y%m%d"), count, end_time - start_time))
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--start-date",default=(date.today()-timedelta(365*30)).strftime("%Y%m%d"))
-    parser.add_argument("--end-date",default=date.today().strftime("%Y%m%d"))
-    parser.add_argument("--trade-date", default=None)
     parser.add_argument("--threads", default=(20))
 
     args = parser.parse_args()
-    start_date = args.start_date
-    end_date = args.end_date
-    trade_date = args.trade_date
     threads = args.threads
 
     static_path = '../Data/Static/basic.csv'
@@ -109,22 +97,20 @@ if __name__ == '__main__':
     logger.info('读取到 {} 只股票基本数据'.format(n))
 
     ##### 获取数据 #####
-    data_path = '../Data/Dynamic/daily_basic/'
+    data_path = '../Data/Dynamic/income/'
     mode = 'f'
     global count
     global start_time
     count = 0
     start_time = time.time()
-    logger.info('开始更新 {} daily_basic数据'.format(date.today().strftime("%Y%m%d")))
+    logger.info('开始更新 {} income 数据'.format(date.today().strftime("%Y%m%d")))
     logger.info('数据存储路径 : {}'.format(data_path))
     thread_list = []
     for i in range(len(ts_codes_list)):
         name = 't' + str(i)
         thread_example = threading.Thread(name=name, target=multi_thread,
-                                          args=(ts_codes_list[i], trade_date,start_date, end_date, data_path))
+                                          args=(ts_codes_list[i], data_path))
         thread_list.append(thread_example)
     start_time = time.time()
     for th in thread_list:
         th.start()
-
-
