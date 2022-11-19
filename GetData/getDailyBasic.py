@@ -62,7 +62,6 @@ def updateData(ts_code,trade_date,start_date,end_date,data_path):
         else:
             logger.info('Error -2, tscode : {}'.format(ts_code))
             return -2
-
     return 0
 
 def multi_thread(ts_codes,*args):
@@ -87,7 +86,7 @@ if __name__ == '__main__':
     parser.add_argument("--start-date",default=(date.today()-timedelta(365*30)).strftime("%Y%m%d"))
     parser.add_argument("--end-date",default=date.today().strftime("%Y%m%d"))
     parser.add_argument("--trade-date", default=None)
-    parser.add_argument("--threads", default=(10))
+    parser.add_argument("--threads", default=(20))
 
     args = parser.parse_args()
     start_date = args.start_date

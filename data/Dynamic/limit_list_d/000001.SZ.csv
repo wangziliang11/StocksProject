@@ -1,0 +1,2 @@
+,trade_date,ts_code,industry,name,close,pct_chg,amount,limit_amount,float_mv,total_mv,turnover_ratio,fd_amount,first_time,last_time,open_times,up_stat,limit_times,limit
+0,20200706,000001.SZ,银行,平安银行,15.68,10.04,7168653312.0,,304282202022.4,304284797501.44,2.43,83424499.0,143627,143627,0,1/1,1,U

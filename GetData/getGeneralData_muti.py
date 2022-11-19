@@ -95,11 +95,10 @@ def multi_thread(ts_codes,*args):
             count += 1
         if count % 100 == 0:
             logger.info('数据更新进度{0}/{1}，耗时:{2:.2f}s'.format(count, n, time.time() - start_time))
-            # if freq in ('D', 'W'):
-            # time.sleep(60)
     end_time = time.time()
     logger.info('{0},{1} {2} 成功更新{3}只股票数据,耗时:{4:.2f}s'.format(freq,adj,date.today().strftime("%Y%m%d"), count,
                                                                            end_time - start_time))
+
 
 
 if __name__ == '__main__':
@@ -109,7 +108,7 @@ if __name__ == '__main__':
     parser.add_argument("--freq", default=('D'))
     parser.add_argument("--adj", default=('qfq'))
     parser.add_argument("--ma", default=([3,5,10,20,30,60,90,120]))
-    parser.add_argument("--threads", default=(10))
+    parser.add_argument("--threads", default=(20))
     args = parser.parse_args()
 
     start_date = args.start_date
