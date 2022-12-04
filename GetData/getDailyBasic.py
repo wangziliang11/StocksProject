@@ -35,7 +35,8 @@ def get_pro_api():
 pro = get_pro_api()
 
 def get_daily_basic(ts_code,trade_date,start_date,end_date):
-    fields = 'ts_code,trade_date,turnover_rate_f,pe,pe_ttm,pb,ps,ps_ttm,dv_ratio,dv_ttm,total_share,float_share,free_share,total_mv,circ_mv'
+    # fields = 'ts_code,trade_date,turnover_rate,turnover_rate_f,pe,pe_ttm,pb,ps,ps_ttm,dv_ratio,dv_ttm,total_share,float_share,free_share,total_mv,circ_mv'
+    fields = 'trade_date,turnover_rate_f,pe,pe_ttm,pb,ps,ps_ttm,dv_ratio,dv_ttm,total_share,float_share,free_share,total_mv,circ_mv'
     data = pro.daily_basic(ts_code=ts_code, trade_date=trade_date,start_date=start_date,end_date=end_date,fields=fields)
     return data
 
@@ -94,7 +95,7 @@ if __name__ == '__main__':
     trade_date = args.trade_date
     threads = args.threads
 
-    static_path = '../Data/Static/basic.csv'
+    static_path = '../data/Static/basic.csv'
     df_basic = pd.read_csv(static_path)
     global n
     n = len(df_basic)
@@ -109,7 +110,7 @@ if __name__ == '__main__':
     logger.info('读取到 {} 只股票基本数据'.format(n))
 
     ##### 获取数据 #####
-    data_path = '../Data/Dynamic/daily_basic/'
+    data_path = '../data/Dynamic/daily_basic/'
     mode = 'f'
     global count
     global start_time

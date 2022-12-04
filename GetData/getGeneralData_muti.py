@@ -100,17 +100,15 @@ def multi_thread(ts_codes,*args):
                                                                            end_time - start_time))
 
 
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--start-date",default=(date.today()-timedelta(365*30)).strftime("%Y%m%d"))
     parser.add_argument("--end-date",default=((date.today()).strftime("%Y%m%d")))
     parser.add_argument("--freq", default=('D'))
     parser.add_argument("--adj", default=('qfq'))
-    parser.add_argument("--ma", default=([3,5,10,20,30,60,90,120]))
+    parser.add_argument("--ma", default=([3,5,10,15,20,30,50,60,75,90,120,150,200]))
     parser.add_argument("--threads", default=(20))
     args = parser.parse_args()
-
     start_date = args.start_date
     end_date = args.end_date
     freq = args.freq
@@ -137,7 +135,7 @@ if __name__ == '__main__':
     logger.info('读取到 {} 只股票基本数据'.format(n))
 
     ##### 获取数据 #####
-    base_path = '../Data/Dynamic/'
+    base_path = '../data/Dynamic/'
     freq_path_mapping = {'D':'daily/','W':'weekly/','M':'monthly/'}
     adj_path_mapping = {'qfq':'qfq/','hfq':'hfq/','wfq':'wfq/'}
     data_path = base_path + freq_path_mapping[freq] + adj_path_mapping[adj]

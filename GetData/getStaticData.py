@@ -112,5 +112,5 @@ if __name__ == '__main__':
 
     df = df_basic.join(df_hs_const,on='ts_code')
     df = df.join(df_stock_company,on='ts_code')
-    df.to_csv('../Data/Static/basic.csv')
+    df.to_csv('../data/Static/basic.csv')
     logger.info('成功获取 {0} 只股票静态信息'.format(len(df)))
